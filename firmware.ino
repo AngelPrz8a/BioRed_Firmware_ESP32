@@ -24,7 +24,7 @@
 
 // ---------- Configuración del Access Point ----------
 const char* AP_SSID     = "ESP32-Setup";
-const char* AP_PASSWORD = "12345678"; // mínimo 8 caracteres, o "" para AP abierto
+const char* AP_PASSWORD = ""; // mínimo 8 caracteres, o "" para AP abierto
 const byte  DNS_PORT    = 53;
 
 WebServer server(80);
@@ -73,10 +73,14 @@ String calidadSenal(int rssi) {
 struct Servicio {
   String id;
   String nombre;
+  String tipo;
   bool   habilitado;
   int    cantidadPines;
   String nombresPines[MAX_PINES_SERVICIO];
   int    pines[MAX_PINES_SERVICIO];       // -1 = sin asignar
+  String canal;
+  String tags;
+  String payload;
   bool   tieneOpcion;
   String nombreOpcion;
   String opciones[MAX_OPCIONES];
@@ -87,6 +91,7 @@ struct Servicio {
 Servicio servicios[MAX_SERVICIOS];
 int cantidadServicios = 0;
 int indiceServicioDHT = -1;
+int indiceServicioMQTT = -1;
 String ultimoIdProbado = "";      // último servicio testeado desde /sensores
 String ultimoResultadoPrueba = ""; // resultado a mostrar una sola vez
 
@@ -107,10 +112,14 @@ void inicializarServiciosDisponibles() {
   Servicio& dht = servicios[cantidadServicios];
   dht.id = "dht";
   dht.nombre = "DHT (temperatura/humedad)";
+  dht.tipo = "sensor";
   dht.habilitado = false;
   dht.cantidadPines = 1;
   dht.nombresPines[0] = "Pin de datos";
   dht.pines[0] = -1;
+  dht.canal = "";
+  dht.tags = "";
+  dht.payload = "";
   dht.tieneOpcion = true;
   dht.nombreOpcion = "Modelo";
   dht.opciones[0] = "DHT11";
@@ -120,9 +129,21 @@ void inicializarServiciosDisponibles() {
   indiceServicioDHT = cantidadServicios;
   cantidadServicios++;
 
-  // Para agregar un servicio nuevo, copiar el bloque de arriba
-  // y ajustar id, nombre, cantidadPines, nombresPines y opciones.
-  // No olvidar agregar también su caso correspondiente en handleProbarSensor().
+  Servicio& mqtt = servicios[cantidadServicios];
+  mqtt.id = "mqtt";
+  mqtt.nombre = "Servicio MQTT";
+  mqtt.tipo = "mqtt";
+  mqtt.habilitado = false;
+  mqtt.cantidadPines = 0;
+  mqtt.canal = "biored/telemetry";
+  mqtt.tags = "telemetria";
+  mqtt.payload = "{\"service\":\"mqtt\",\"value\":\"ok\"}";
+  mqtt.tieneOpcion = false;
+  indiceServicioMQTT = cantidadServicios;
+  cantidadServicios++;
+
+  // Para agregar un servicio nuevo, copiar el bloque de arriba,
+  // asignar un id y tipo únicos y añadir su lógica en los manejadores.
 }
 
 void cargarConfigServicios() {
@@ -133,6 +154,9 @@ void cargarConfigServicios() {
       String key = servicios[i].id + "_p" + String(p);
       servicios[i].pines[p] = prefs.getInt(key.c_str(), -1);
     }
+    servicios[i].canal = prefs.getString((servicios[i].id + "_canal").c_str(), servicios[i].canal);
+    servicios[i].tags = prefs.getString((servicios[i].id + "_tags").c_str(), servicios[i].tags);
+    servicios[i].payload = prefs.getString((servicios[i].id + "_payload").c_str(), servicios[i].payload);
     if (servicios[i].tieneOpcion) {
       String key = servicios[i].id + "_opt";
       servicios[i].opcionSeleccionada = prefs.getString(key.c_str(), servicios[i].opciones[0]);
@@ -148,6 +172,9 @@ void guardarConfigServicio(int idx) {
     String key = servicios[idx].id + "_p" + String(p);
     prefs.putInt(key.c_str(), servicios[idx].pines[p]);
   }
+  prefs.putString((servicios[idx].id + "_canal").c_str(), servicios[idx].canal);
+  prefs.putString((servicios[idx].id + "_tags").c_str(), servicios[idx].tags);
+  prefs.putString((servicios[idx].id + "_payload").c_str(), servicios[idx].payload);
   if (servicios[idx].tieneOpcion) {
     String key = servicios[idx].id + "_opt";
     prefs.putString(key.c_str(), servicios[idx].opcionSeleccionada);
@@ -190,7 +217,9 @@ bool mqttHabilitado = false;
 WiFiClient espClient;
 PubSubClient mqttClient(espClient);
 unsigned long ultimoIntentoMQTT = 0;
+unsigned long ultimaPublicacionMQTT = 0;
 const unsigned long MQTT_RECONNECT_INTERVAL = 5000;
+const unsigned long MQTT_PUBLISH_INTERVAL_MS = 5000;
 
 void cargarConfigMQTT() {
   prefs.begin("mqtt", true);
@@ -226,6 +255,45 @@ void aplicarConfigMQTT() {
   mqttClient.setServer(mqttHost.c_str(), mqttPort);
   if (mqttClient.connected()) mqttClient.disconnect();
   intentarConectarMQTT();
+}
+
+String construirPayloadMQTT(const struct Servicio& servicio) {
+  if (servicio.tags == "") return servicio.payload;
+
+  String tagsJson = "[";
+  int posicion = 0;
+  String copia = servicio.tags;
+  while (true) {
+    int coma = copia.indexOf(',');
+    String tag = coma >= 0 ? copia.substring(0, coma) : copia;
+    tag.trim();
+    if (tag != "") {
+      if (posicion++ > 0) tagsJson += ',';
+      tagsJson += '"' + tag + '"';
+    }
+    if (coma < 0) break;
+    copia = copia.substring(coma + 1);
+  }
+  tagsJson += "]";
+
+  return "{\"service\":\"" + servicio.id + "\",\"tags\":" + tagsJson
+       + ",\"payload\":" + servicio.payload + "}";
+}
+
+void publicarServicioMQTT() {
+  if (!mqttHabilitado || !mqttClient.connected()) return;
+  if (millis() - ultimaPublicacionMQTT < MQTT_PUBLISH_INTERVAL_MS) return;
+  ultimaPublicacionMQTT = millis();
+
+  for (int i = 0; i < cantidadServicios; i++) {
+    Servicio& s = servicios[i];
+    if (s.tipo != "mqtt" || !s.habilitado || s.canal == "") continue;
+
+    String payload = construirPayloadMQTT(s);
+    if (!mqttClient.publish(s.canal.c_str(), payload.c_str())) {
+      Serial.println("[MQTT] Error al publicar en " + s.canal);
+    }
+  }
 }
 
 // =====================================================================
@@ -483,6 +551,15 @@ void handleSensores() {
       html += "</select>";
     }
 
+    if (s.tipo == "mqtt") {
+      html += "<label>Canal / topic MQTT</label>";
+      html += "<input type='text' name='" + s.id + "_canal' value='" + s.canal + "' placeholder='biored/temperature/dht'>";
+      html += "<label>Tags</label>";
+      html += "<input type='text' name='" + s.id + "_tags' value='" + s.tags + "' placeholder='temperatura,humedad'>";
+      html += "<label>Payload</label>";
+      html += "<textarea name='" + s.id + "_payload' rows='3'>" + s.payload + "</textarea>";
+    }
+
     // Prueba en vivo: confirma que el pin/modelo elegido corresponde al
     // sensor conectado, sin exponer datos concretos de lectura.
     html += "<button type='submit' name='probar_id' value='" + s.id + "' formaction='/probar-sensor' class='secundario'>Probar conexión</button>";
@@ -558,6 +635,12 @@ void handleGuardarSensores() {
       if (server.hasArg(nombreCampoOpt)) {
         s.opcionSeleccionada = server.arg(nombreCampoOpt);
       }
+    }
+
+    if (s.tipo == "mqtt") {
+      if (server.hasArg(s.id + "_canal")) s.canal = server.arg(s.id + "_canal");
+      if (server.hasArg(s.id + "_tags")) s.tags = server.arg(s.id + "_tags");
+      if (server.hasArg(s.id + "_payload")) s.payload = server.arg(s.id + "_payload");
     }
 
     guardarConfigServicio(i);
@@ -863,6 +946,7 @@ void loop() {
   if (mqttHabilitado) {
     if (mqttClient.connected()) {
       mqttClient.loop();
+      publicarServicioMQTT();
     } else if (millis() - ultimoIntentoMQTT > MQTT_RECONNECT_INTERVAL) {
       ultimoIntentoMQTT = millis();
       intentarConectarMQTT();
