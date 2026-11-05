@@ -33,7 +33,9 @@ son módulos opcionales. Todos los interruptores de compilación empiezan en
 | Motores paso a paso | **Stepper** |
 
 Con los interruptores en cero solo se requiere ArduinoJson además del core. Las
-bibliotecas de módulos desactivados no se incluyen en la compilación.
+bibliotecas de módulos desactivados no se incluyen en la compilación. El
+firmware inicia normalmente aunque todos los sensores, módulos y salidas estén
+desactivados: WiFi y el portal de configuración forman parte del núcleo.
 
 ## Apertura y carga del sketch
 
@@ -61,7 +63,7 @@ carpeta antes de abrirla en Arduino IDE.
 3. Una vez conectada como estación, la dirección IP puede consultarse en el
    monitor serie o en el router; el portal queda disponible en `http://<IP>`.
    También se anuncia el hostname configurado mediante mDNS, normalmente
-   `http://esp32-device.local`.
+   `http://biored.local`.
 4. Inicialmente, el portal no tiene contraseña. Se recomienda configurar una
    desde **Acceso al portal** antes de conectarlo a una red compartida.
 

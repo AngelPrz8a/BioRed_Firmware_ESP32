@@ -1,11 +1,11 @@
 #pragma once
 // Interruptores de compilación: 0 desactiva y 1 incluye el módulo.
 // Los módulos opcionales se compilan desactivados por defecto.
-#define BIORED_VERSION "4.0.0"
+#define BIORED_VERSION "5.2.0"
 
 // Sensores (cada uno es un archivo en src/sensores/)
 #ifndef BIORED_SENSOR_DHT22
-#define BIORED_SENSOR_DHT22      0
+#define BIORED_SENSOR_DHT22      1
 #endif
 #ifndef BIORED_SENSOR_MQ135
 #define BIORED_SENSOR_MQ135      0
@@ -34,4 +34,4 @@
 #define BIORED_API_URL_DEFECTO   ""
 #define BIORED_AP_SSID           "ESP32-Setup"
 #define BIORED_AP_PASS           "esp32setup"   // cámbiese; mínimo 8 caracteres
-#define BIORED_HOSTNAME          "esp32-device" // http://esp32-device.local
+#define BIORED_HOSTNAME          "biored" // http://biored.local
