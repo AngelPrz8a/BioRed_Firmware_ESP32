@@ -5,7 +5,7 @@
 
 // Sensores (cada uno es un archivo en src/sensores/)
 #ifndef BIORED_SENSOR_DHT22
-#define BIORED_SENSOR_DHT22      1
+#define BIORED_SENSOR_DHT22      0
 #endif
 #ifndef BIORED_SENSOR_MQ135
 #define BIORED_SENSOR_MQ135      0
