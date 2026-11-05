@@ -13,70 +13,115 @@
 #endif
 
 namespace {
-  struct Entrada { Sensor* s; bool activo; int pin; };
-  Entrada lista[8];
-  int n = 0;
-  SemaphoreHandle_t mtx = nullptr;
-
-  struct Cerrojo {
-    bool ok;
-    Cerrojo()  { ok = xSemaphoreTake(mtx, pdMS_TO_TICKS(50)) == pdTRUE; }
-    ~Cerrojo() { if (ok) xSemaphoreGive(mtx); }
+  struct EntradaSensor {
+    Sensor* sensor;
+    bool activo;
+    int pin;
   };
 
-  void alta(Sensor* s) {
-    if (n >= 8) return;
-    const bool on = cfgSensorOn(s->id(), false);
-    const int pin = cfgSensorPin(s->id(), s->pinPorDefecto());
-    if (on) { s->begin(pin); Serial.printf("[Registro] %s activo en GPIO%d\n", s->id(), pin); }
-    lista[n++] = {s, on, pin};
+  EntradaSensor sensoresRegistrados[8];
+  int cantidadSensores = 0;
+  SemaphoreHandle_t mutexRegistro = nullptr;
+
+  struct BloqueoRegistro {
+    bool adquirido;
+
+    BloqueoRegistro() {
+      adquirido = xSemaphoreTake(mutexRegistro, pdMS_TO_TICKS(50)) == pdTRUE;
+    }
+
+    ~BloqueoRegistro() {
+      if (adquirido) xSemaphoreGive(mutexRegistro);
+    }
+  };
+
+  void registrarSensor(Sensor* sensor) {
+    if (cantidadSensores >= 8) return;
+
+    const bool activo = sensorHabilitadoEnConfiguracion(sensor->identificador(), false);
+    const int pin = pinSensorEnConfiguracion(sensor->identificador(), sensor->pinPredeterminado());
+    if (activo) {
+      sensor->iniciar(pin);
+      Serial.printf("[Registro] %s activo en GPIO%d\n", sensor->identificador(), pin);
+    }
+
+    sensoresRegistrados[cantidadSensores++] = {sensor, activo, pin};
   }
 }
 
-void registroInit() {
-  mtx = xSemaphoreCreateMutex();
+void iniciarRegistroSensores() {
+  mutexRegistro = xSemaphoreCreateMutex();
   // Cada sensor requiere su interruptor en BioRedConfig.h y habilitarse en el portal.
 #if BIORED_SENSOR_DHT22
-  static SensorDHT22 dht;        alta(&dht);
+  static SensorDHT22 dht;
+  registrarSensor(&dht);
 #endif
 #if BIORED_SENSOR_MQ135
-  static SensorMQ135 mq;         alta(&mq);
+  static SensorMQ135 mq;
+  registrarSensor(&mq);
 #endif
 #if BIORED_SENSOR_MICROFONO
-  static SensorMicrofono mic;    alta(&mic);
+  static SensorMicrofono microfono;
+  registrarSensor(&microfono);
 #endif
 }
 
-void registroActualizar() {
-  for (int i = 0; i < n; i++) {
-    if (!lista[i].activo) continue;
-    Cerrojo c;
-    if (c.ok) lista[i].s->update();
+void actualizarRegistroSensores() {
+  for (int indiceSensor = 0; indiceSensor < cantidadSensores; indiceSensor++) {
+    if (!sensoresRegistrados[indiceSensor].activo) continue;
+
+    BloqueoRegistro bloqueo;
+    if (bloqueo.adquirido) sensoresRegistrados[indiceSensor].sensor->actualizar();
   }
 }
 
-int     registroCantidad()      { return n; }
-Sensor* registroSensor(int i)   { return lista[i].s; }
-bool    registroActivo(int i)   { return lista[i].activo; }
-int     registroPin(int i)      { return lista[i].pin; }
+int cantidadSensoresRegistrados() {
+  return cantidadSensores;
+}
 
-void registroConfigurar(const char* id, bool on, int pin) {
-  for (int i = 0; i < n; i++) {
-    if (strcmp(lista[i].s->id(), id) != 0) continue;
-    if (pin < 0 || pin > 48) pin = lista[i].s->pinPorDefecto();
-    cfgSensorGuardar(id, on, pin);
+Sensor* obtenerSensorRegistrado(int indice) {
+  return sensoresRegistrados[indice].sensor;
+}
+
+bool sensorRegistradoActivo(int indice) {
+  return sensoresRegistrados[indice].activo;
+}
+
+int pinSensorRegistrado(int indice) {
+  return sensoresRegistrados[indice].pin;
+}
+
+void configurarSensorRegistrado(const char* identificadorSensor, bool activo, int pin) {
+  for (int indiceSensor = 0; indiceSensor < cantidadSensores; indiceSensor++) {
+    Sensor* sensor = sensoresRegistrados[indiceSensor].sensor;
+    if (strcmp(sensor->identificador(), identificadorSensor) != 0) continue;
+
+    if (pin < 0 || pin > 48) pin = sensor->pinPredeterminado();
+    guardarConfiguracionDelSensor(identificadorSensor, activo, pin);
   }
 }
 
-int registroDatos(int i, Dato* out, int max) {
-  if (i < 0 || i >= n || !lista[i].activo) return 0;
-  Cerrojo c;
-  return c.ok ? lista[i].s->datos(out, max) : 0;
+int obtenerLecturasSensor(int indiceSensor, LecturaSensor* datos, int capacidad) {
+  if (indiceSensor < 0 || indiceSensor >= cantidadSensores ||
+      !sensoresRegistrados[indiceSensor].activo) {
+    return 0;
+  }
+
+  BloqueoRegistro bloqueo;
+  return bloqueo.adquirido
+      ? sensoresRegistrados[indiceSensor].sensor->obtenerLecturas(datos, capacidad)
+      : 0;
 }
 
-bool registroArmarApi(JsonDocument& doc) {
-  Cerrojo c;
-  if (!c.ok) return false;
-  for (int i = 0; i < n; i++) if (lista[i].activo) lista[i].s->aApi(doc);
+bool agregarSensoresAlJsonApi(JsonDocument& doc) {
+  BloqueoRegistro bloqueo;
+  if (!bloqueo.adquirido) return false;
+
+  for (int indiceSensor = 0; indiceSensor < cantidadSensores; indiceSensor++) {
+    if (sensoresRegistrados[indiceSensor].activo) {
+      sensoresRegistrados[indiceSensor].sensor->agregarLecturasAlJsonApi(doc);
+    }
+  }
+
   return true;
 }

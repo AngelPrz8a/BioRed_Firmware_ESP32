@@ -26,11 +26,11 @@ class SensorMQ135 : public Sensor {
   static bool ppmOk(float p) { return isfinite(p) && p >= 0.0f && p <= 99999999.99f; }
 
  public:
-  const char* id() const override     { return "mq135"; }
-  const char* nombre() const override { return "MQ135 (calidad del aire)"; }
-  int pinPorDefecto() const override  { return 3; }
+  const char* identificador() const override     { return "mq135"; }
+  const char* nombreParaMostrar() const override { return "MQ135 (calidad del aire)"; }
+  int pinPredeterminado() const override  { return 3; }
 
-  void begin(int pin) override {
+  void iniciar(int pin) override {
     pin_ = pin;
     mq_ = new MQUnifiedsensor("ESP32", MQ_VCC, 12, pin, "MQ-135");
     fase_ = CALENTANDO;
@@ -38,7 +38,7 @@ class SensorMQ135 : public Sensor {
     Serial.println("[MQ135] Calentando 3 min (no bloquea)");
   }
 
-  void update() override {
+  void actualizar() override {
     if (!mq_) return;
     switch (fase_) {
       case CALENTANDO:
@@ -82,27 +82,27 @@ class SensorMQ135 : public Sensor {
     }
   }
 
-  const char* estado() const override {
+  const char* estadoActual() const override {
     return fase_ == CALENTANDO ? "calentando" : fase_ == CALIBRANDO ? "calibrando" : "listo";
   }
 
-  int datos(Dato* out, int max) const override {
+  int obtenerLecturas(LecturaSensor* out, int max) const override {
     if (fase_ != LISTO || g_.ts == 0) return 0;
-    const Dato todos[] = {{"co2", g_.co2, "ppm"}, {"co", g_.co, "ppm"}, {"nh3", g_.nh3, "ppm"},
+    const LecturaSensor todos[] = {{"co2", g_.co2, "ppm"}, {"co", g_.co, "ppm"}, {"nh3", g_.nh3, "ppm"},
                           {"alcohol", g_.alcohol, "ppm"}, {"tolueno", g_.tolueno, "ppm"},
                           {"acetona", g_.acetona, "ppm"}};
     int n = 0;
-    for (const Dato& d : todos) if (n < max && ppmOk(d.valor)) out[n++] = d;
+    for (const LecturaSensor& d : todos) if (n < max && ppmOk(d.valor)) out[n++] = d;
     return n;
   }
 
-  void aApi(JsonDocument& doc) const override {
+  void agregarLecturasAlJsonApi(JsonDocument& doc) const override {
     JsonObject mq = doc.createNestedObject("mq135");
     if (fase_ != LISTO || g_.ts == 0) { mq["warmed_up"] = false; return; }
     mq["warmed_up"]      = true;
-    mq["raw"]            = (int)acotar(g_.adcRaw, 0, 4095, 0);
-    mq["output_voltage"] = acotar(g_.vAout, 0, 5.5, 3);
-    if (isfinite(g_.rs) && g_.rs >= 0 && g_.rs <= 99999.999f) mq["rs_kohm"] = acotar(g_.rs, 0, 99999.999, 3);
+    mq["raw"]            = (int)limitarYRedondear(g_.adcRaw, 0, 4095, 0);
+    mq["output_voltage"] = limitarYRedondear(g_.vAout, 0, 5.5, 3);
+    if (isfinite(g_.rs) && g_.rs >= 0 && g_.rs <= 99999.999f) mq["rs_kohm"] = limitarYRedondear(g_.rs, 0, 99999.999, 3);
     else mq["rs_kohm"] = nullptr;
     mq["alarm"] = nullptr;   // sin salida digital D-out
 
@@ -113,7 +113,7 @@ class SensorMQ135 : public Sensor {
     for (const auto& l : lista) {
       JsonObject e = est.createNestedObject();
       e["gas"] = l.gas;
-      if (ppmOk(l.ppm)) e["ppm"] = acotar(l.ppm, 0, 99999999.99, 2);
+      if (ppmOk(l.ppm)) e["ppm"] = limitarYRedondear(l.ppm, 0, 99999999.99, 2);
       else              e["ppm"] = nullptr;
     }
   }

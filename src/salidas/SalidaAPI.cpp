@@ -15,7 +15,7 @@ namespace {
   const uint32_t ESPERA_MAX_MS = 300000;   // tope del reintento con espera creciente
   const uint32_t ESPERA_ERROR_MS = 300000; // pausa tras errores de configuración
 
-  EstadoApi    estado = {0, 0, 0};
+  EstadoEnvioApi    estado = {0, 0, 0};
   TaskHandle_t tarea = nullptr;
   char         uid[18] = "";
   uint8_t      fallos = 0;
@@ -25,7 +25,7 @@ namespace {
     doc["device_uid"]       = uid;
     doc["firmware_version"] = BIORED_VERSION;
     doc["uptime_s"]         = (uint32_t)(millis() / 1000);
-    if (!registroArmarApi(doc)) return false;
+    if (!agregarSensoresAlJsonApi(doc)) return false;
     if (doc.overflowed()) Serial.println("[API] AVISO el JSON no cupo en el documento");
     serializeJson(doc, out);
     return true;
@@ -36,12 +36,12 @@ namespace {
     cliente.setCACert(CERTIFICADOS_RAIZ);
     cliente.setHandshakeTimeout(TIMEOUT_MS / 1000);
     HTTPClient http;
-    if (!http.begin(cliente, cfg.apiUrl)) { respuesta = "URL invalida"; return -100; }
+    if (!http.begin(cliente, configuracion.urlApi)) { respuesta = "URL invalida"; return -100; }
     http.setConnectTimeout(TIMEOUT_MS);
     http.setTimeout(TIMEOUT_MS);
     http.setUserAgent(String("ESP32-WiFi-Modular/") + BIORED_VERSION);
     http.addHeader("Content-Type", "application/json");
-    http.addHeader("x-api-key", cfg.apiKey);
+    http.addHeader("x-api-key", configuracion.claveApi);
     const int codigo = http.POST(cuerpo);
     if (codigo > 0) {
       respuesta = http.getString();
@@ -81,10 +81,10 @@ namespace {
     vTaskDelay(pdMS_TO_TICKS(ESPERA_INICIAL_MS));
     for (;;) {
       const uint32_t inicio = millis();
-      const uint32_t base = cfg.apiIntervaloS * 1000UL;
+      const uint32_t base = configuracion.intervaloApiSegundos * 1000UL;
       uint32_t espera = 2000;                 // inactiva: vuelve a mirar la config cada 2 s
 
-      if (cfg.apiOn && cfg.apiKey[0] && WiFi.status() == WL_CONNECTED) {
+      if (configuracion.apiHabilitada && configuracion.claveApi[0] && WiFi.status() == WL_CONNECTED) {
         String cuerpo, respuesta;
         if (armarJson(cuerpo)) {
           const int codigo = enviar(cuerpo, respuesta);
@@ -108,9 +108,9 @@ namespace {
   }
 }
 
-void salidaApiInit() {
+void iniciarEnvioApi() {
   if (tarea) return;
-  String mac = cfg.deviceUid[0] ? String(cfg.deviceUid) : WiFi.macAddress();   // MAC de fábrica = identidad
+  String mac = configuracion.identificadorDispositivo[0] ? String(configuracion.identificadorDispositivo) : WiFi.macAddress();   // MAC de fábrica = identidad
   mac.toUpperCase();
   strlcpy(uid, mac.c_str(), sizeof uid);
   if (xTaskCreatePinnedToCore(tareaEnvio, "SalidaAPI", STACK_BYTES, nullptr, 1, &tarea, 0) != pdPASS) {
@@ -121,5 +121,5 @@ void salidaApiInit() {
   }
 }
 
-const EstadoApi& salidaApiEstado() { return estado; }
+const EstadoEnvioApi& obtenerEstadoEnvioApi() { return estado; }
 #endif

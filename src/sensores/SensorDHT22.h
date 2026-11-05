@@ -10,17 +10,17 @@ class SensorDHT22 : public Sensor {
   static const uint32_t INTERVALO_MS = 3000;
 
  public:
-  const char* id() const override     { return "dht22"; }
-  const char* nombre() const override { return "DHT22 (temperatura y humedad)"; }
-  int pinPorDefecto() const override  { return 14; }
+  const char* identificador() const override     { return "dht22"; }
+  const char* nombreParaMostrar() const override { return "DHT22 (temperatura y humedad)"; }
+  int pinPredeterminado() const override  { return 14; }
 
-  void begin(int pin) override {
+  void iniciar(int pin) override {
     dht_ = new DHT(pin, DHT22);
     dht_->begin();
     ultimo_ = millis() - INTERVALO_MS;   // primera lectura inmediata
   }
 
-  void update() override {
+  void actualizar() override {
     if (!dht_ || millis() - ultimo_ < INTERVALO_MS) return;
     ultimo_ = millis();
     const float h = dht_->readHumidity(), t = dht_->readTemperature();
@@ -28,21 +28,21 @@ class SensorDHT22 : public Sensor {
     if (ok_) { t_ = t; h_ = h; }
   }
 
-  const char* estado() const override { return ok_ ? "ok" : "sin datos"; }
+  const char* estadoActual() const override { return ok_ ? "ok" : "sin datos"; }
 
-  int datos(Dato* out, int max) const override {
+  int obtenerLecturas(LecturaSensor* out, int max) const override {
     if (!ok_ || max < 2) return 0;
     out[0] = {"temperatura", t_, "°C"};
     out[1] = {"humedad",     h_, "%"};
     return 2;
   }
 
-  void aApi(JsonDocument& doc) const override {
+  void agregarLecturasAlJsonApi(JsonDocument& doc) const override {
     JsonObject o = doc.createNestedObject("dht22");
     o["valid"] = ok_;
     if (ok_) {
-      o["temperature_c"] = acotar(t_, -40, 80, 1);
-      o["humidity_pct"]  = acotar(h_, 0, 100, 1);
+      o["temperature_c"] = limitarYRedondear(t_, -40, 80, 1);
+      o["humidity_pct"]  = limitarYRedondear(h_, 0, 100, 1);
     } else {
       o["temperature_c"] = nullptr;
       o["humidity_pct"]  = nullptr;

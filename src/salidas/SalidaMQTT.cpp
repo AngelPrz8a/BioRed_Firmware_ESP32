@@ -9,13 +9,13 @@
 namespace {
   WiFiClient   red;
   PubSubClient mqtt(red);
-  EstadoMqtt   est = {false, 0, ""};
+  EstadoConexionMqtt   est = {false, 0, ""};
   TaskHandle_t tarea = nullptr;
   volatile bool reconectar = false;
   uint32_t ultIntento = 0, ultPub = 0;
 
   void topic(char* dst, size_t n, const char* sufijo) {
-    snprintf(dst, n, "%s/%s/%s", cfg.mqttRaiz, cfg.mqttModulo, sufijo);
+    snprintf(dst, n, "%s/%s/%s", configuracion.raizTopicsMqtt, configuracion.nombreEstacionMqtt, sufijo);
   }
 
   const char* describir(int rc) {
@@ -33,34 +33,34 @@ namespace {
   }
 
   void conectar() {
-    mqtt.setServer(cfg.mqttHost, cfg.mqttPort);
+    mqtt.setServer(configuracion.servidorMqtt, configuracion.puertoMqtt);
     char estadoTopic[80]; topic(estadoTopic, sizeof estadoTopic, "estado");
     String m = WiFi.macAddress(); m.replace(":", "");
     const String cid = "esp32-" + m.substring(6);
-    const bool conUsuario = cfg.mqttUser[0] != '\0';
+    const bool conUsuario = configuracion.usuarioMqtt[0] != '\0';
     const bool ok = mqtt.connect(cid.c_str(),
-                                 conUsuario ? cfg.mqttUser : nullptr,
-                                 conUsuario ? cfg.mqttPass : nullptr,
+                                 conUsuario ? configuracion.usuarioMqtt : nullptr,
+                                 conUsuario ? configuracion.contrasenaMqtt : nullptr,
                                  estadoTopic, 0, true, "offline");
     if (ok) {
       est.error[0] = '\0';
       mqtt.publish(estadoTopic, "online", true);
-      Serial.printf("[MQTT] Conectado a %s:%u\n", cfg.mqttHost, cfg.mqttPort);
+      Serial.printf("[MQTT] Conectado a %s:%u\n", configuracion.servidorMqtt, configuracion.puertoMqtt);
     } else {
       strlcpy(est.error, describir(mqtt.state()), sizeof est.error);
     }
   }
 
   void publicar() {
-    for (int i = 0; i < registroCantidad(); i++) {
-      Dato d[8];
-      const int n = registroDatos(i, d, 8);
+    for (int i = 0; i < cantidadSensoresRegistrados(); i++) {
+      LecturaSensor d[8];
+      const int n = obtenerLecturasSensor(i, d, 8);
       if (n == 0) continue;
       StaticJsonDocument<384> doc;
       for (int k = 0; k < n; k++) doc[d[k].clave] = roundf(d[k].valor * 100.0f) / 100.0f;
       char payload[384], t[96];
       serializeJson(doc, payload, sizeof payload);
-      topic(t, sizeof t, registroSensor(i)->id());
+      topic(t, sizeof t, obtenerSensorRegistrado(i)->identificador());
       if (mqtt.publish(t, payload)) est.publicados++;
     }
   }
@@ -73,7 +73,7 @@ namespace {
         ultIntento = millis() - 5000UL;     // reintenta de inmediato
         est.conectado = false;
       }
-      const bool activa = cfg.mqttOn && cfg.mqttHost[0] && WiFi.status() == WL_CONNECTED;
+      const bool activa = configuracion.mqttHabilitado && configuracion.servidorMqtt[0] && WiFi.status() == WL_CONNECTED;
       if (!activa) {
         if (mqtt.connected()) mqtt.disconnect();
         est.conectado = false;
@@ -86,20 +86,20 @@ namespace {
       } else {
         est.conectado = true;
         mqtt.loop();
-        if (millis() - ultPub >= cfg.mqttIntervaloS * 1000UL) { ultPub = millis(); publicar(); }
+        if (millis() - ultPub >= configuracion.intervaloMqttSegundos * 1000UL) { ultPub = millis(); publicar(); }
       }
       vTaskDelay(pdMS_TO_TICKS(50));
     }
   }
 }
 
-void salidaMqttInit() {
+void iniciarPublicacionMqtt() {
   if (tarea) return;
   mqtt.setSocketTimeout(4);
   mqtt.setBufferSize(512);
   xTaskCreatePinnedToCore(tareaMqtt, "SalidaMQTT", 6144, nullptr, 1, &tarea, 0);
 }
 
-void salidaMqttAplicar() { reconectar = true; }
-const EstadoMqtt& salidaMqttEstado() { return est; }
+void reconectarMqtt() { reconectar = true; }
+const EstadoConexionMqtt& obtenerEstadoMqtt() { return est; }
 #endif

@@ -12,15 +12,15 @@ namespace {
   Stepper motorTilt(PASOS_POR_REVOLUCION, 1, 42, 2, 41);
 }
 
-void motoresInit() {
+void inicializarMotores() {
   motorPan.setSpeed(VELOCIDAD_RPM);
   motorTilt.setSpeed(VELOCIDAD_RPM);
 }
 
-int motoresPasosPorDefecto() { return PASOS_POR_PULSO; }
+int pasosPredeterminadosMotor() { return PASOS_POR_PULSO; }
 
 // Las bobinas quedan energizadas al terminar para mantener el par de sujeción.
-bool motoresMover(const String& dir, int& pasos, String& error) {
+bool moverMotor(const String& dir, int& pasos, String& error) {
   pasos = constrain(pasos, 1, 200);
   if      (dir == "ARRIBA") motorTilt.step( pasos);
   else if (dir == "ABAJO")  motorTilt.step(-pasos);

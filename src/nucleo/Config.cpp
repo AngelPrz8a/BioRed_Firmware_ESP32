@@ -2,65 +2,91 @@
 #include <Preferences.h>
 #include "../BioRedConfig.h"
 
-Cfg cfg;
+Configuracion configuracion;
 
 namespace {
-  const char* NS = "biored";
-  void leer(Preferences& p, const char* k, char* dst, size_t n, const char* def) {
-    strlcpy(dst, p.getString(k, def).c_str(), n);
+  const char NOMBRE_ESPACIO_NVS[] = "biored";
+
+  void leerTexto(Preferences& preferencias, const char* clave, char* destino,
+                 size_t capacidad, const char* valorPredeterminado) {
+    strlcpy(destino, preferencias.getString(clave, valorPredeterminado).c_str(), capacidad);
   }
 }
 
-void cfgCargar() {
-  Preferences p;
-  p.begin(NS, false);
-  leer(p, "ssid", cfg.wifiSsid, sizeof cfg.wifiSsid, "");
-  leer(p, "wpass", cfg.wifiPass, sizeof cfg.wifiPass, "");
-  cfg.apiOn = p.getBool("api_on", false);
-  leer(p, "api_url", cfg.apiUrl, sizeof cfg.apiUrl, BIORED_API_URL_DEFECTO);
-  leer(p, "api_key", cfg.apiKey, sizeof cfg.apiKey, "");
-  leer(p, "uid", cfg.deviceUid, sizeof cfg.deviceUid, "");
-  cfg.apiIntervaloS = p.getUInt("api_int", 30);
-  cfg.mqttOn = p.getBool("mq_on", false);
-  leer(p, "mq_host", cfg.mqttHost, sizeof cfg.mqttHost, "");
-  leer(p, "mq_user", cfg.mqttUser, sizeof cfg.mqttUser, "");
-  leer(p, "mq_pass", cfg.mqttPass, sizeof cfg.mqttPass, "");
-  leer(p, "mq_raiz", cfg.mqttRaiz, sizeof cfg.mqttRaiz, "sensores");
-  leer(p, "mq_mod", cfg.mqttModulo, sizeof cfg.mqttModulo, "sensor-1");
-  cfg.mqttPort = p.getUShort("mq_port", 1883);
-  cfg.mqttIntervaloS = p.getUInt("mq_int", 10);
-  leer(p, "portal", cfg.portalPass, sizeof cfg.portalPass, "");
-  p.end();
+void cargarConfiguracion() {
+  Preferences preferencias;
+  preferencias.begin(NOMBRE_ESPACIO_NVS, false);
+
+  leerTexto(preferencias, "ssid", configuracion.nombreRedWifi, sizeof configuracion.nombreRedWifi, "");
+  leerTexto(preferencias, "wpass", configuracion.contrasenaRedWifi, sizeof configuracion.contrasenaRedWifi, "");
+
+  configuracion.apiHabilitada = preferencias.getBool("api_on", false);
+  leerTexto(preferencias, "api_url", configuracion.urlApi, sizeof configuracion.urlApi, BIORED_API_URL_DEFECTO);
+  leerTexto(preferencias, "api_key", configuracion.claveApi, sizeof configuracion.claveApi, "");
+  leerTexto(preferencias, "uid", configuracion.identificadorDispositivo, sizeof configuracion.identificadorDispositivo, "");
+  configuracion.intervaloApiSegundos = preferencias.getUInt("api_int", 30);
+
+  configuracion.mqttHabilitado = preferencias.getBool("mq_on", false);
+  leerTexto(preferencias, "mq_host", configuracion.servidorMqtt, sizeof configuracion.servidorMqtt, "");
+  leerTexto(preferencias, "mq_user", configuracion.usuarioMqtt, sizeof configuracion.usuarioMqtt, "");
+  leerTexto(preferencias, "mq_pass", configuracion.contrasenaMqtt, sizeof configuracion.contrasenaMqtt, "");
+  leerTexto(preferencias, "mq_raiz", configuracion.raizTopicsMqtt, sizeof configuracion.raizTopicsMqtt, "sensores");
+  leerTexto(preferencias, "mq_mod", configuracion.nombreEstacionMqtt, sizeof configuracion.nombreEstacionMqtt, "sensor-1");
+  configuracion.puertoMqtt = preferencias.getUShort("mq_port", 1883);
+  configuracion.intervaloMqttSegundos = preferencias.getUInt("mq_int", 10);
+
+  leerTexto(preferencias, "portal", configuracion.contrasenaPortal, sizeof configuracion.contrasenaPortal, "");
+  preferencias.end();
 }
 
-void cfgGuardar() {
-  Preferences p;
-  p.begin(NS, false);
-  p.putString("ssid", cfg.wifiSsid);   p.putString("wpass", cfg.wifiPass);
-  p.putBool("api_on", cfg.apiOn);      p.putString("api_url", cfg.apiUrl);
-  p.putString("api_key", cfg.apiKey);  p.putString("uid", cfg.deviceUid);
-  p.putUInt("api_int", cfg.apiIntervaloS);
-  p.putBool("mq_on", cfg.mqttOn);      p.putString("mq_host", cfg.mqttHost);
-  p.putString("mq_user", cfg.mqttUser); p.putString("mq_pass", cfg.mqttPass);
-  p.putString("mq_raiz", cfg.mqttRaiz); p.putString("mq_mod", cfg.mqttModulo);
-  p.putUShort("mq_port", cfg.mqttPort); p.putUInt("mq_int", cfg.mqttIntervaloS);
-  p.putString("portal", cfg.portalPass);
-  p.end();
+void guardarConfiguracion() {
+  Preferences preferencias;
+  preferencias.begin(NOMBRE_ESPACIO_NVS, false);
+
+  preferencias.putString("ssid", configuracion.nombreRedWifi);
+  preferencias.putString("wpass", configuracion.contrasenaRedWifi);
+
+  preferencias.putBool("api_on", configuracion.apiHabilitada);
+  preferencias.putString("api_url", configuracion.urlApi);
+  preferencias.putString("api_key", configuracion.claveApi);
+  preferencias.putString("uid", configuracion.identificadorDispositivo);
+  preferencias.putUInt("api_int", configuracion.intervaloApiSegundos);
+
+  preferencias.putBool("mq_on", configuracion.mqttHabilitado);
+  preferencias.putString("mq_host", configuracion.servidorMqtt);
+  preferencias.putString("mq_user", configuracion.usuarioMqtt);
+  preferencias.putString("mq_pass", configuracion.contrasenaMqtt);
+  preferencias.putString("mq_raiz", configuracion.raizTopicsMqtt);
+  preferencias.putString("mq_mod", configuracion.nombreEstacionMqtt);
+  preferencias.putUShort("mq_port", configuracion.puertoMqtt);
+  preferencias.putUInt("mq_int", configuracion.intervaloMqttSegundos);
+
+  preferencias.putString("portal", configuracion.contrasenaPortal);
+  preferencias.end();
 }
 
-bool cfgSensorOn(const char* id, bool def) {
-  Preferences p; p.begin(NS, false);
-  const bool v = p.getBool((String(id) + "_on").c_str(), def);
-  p.end(); return v;
+bool sensorHabilitadoEnConfiguracion(const char* identificadorSensor, bool valorPredeterminado) {
+  Preferences preferencias;
+  preferencias.begin(NOMBRE_ESPACIO_NVS, false);
+  const bool habilitado = preferencias.getBool(
+      (String(identificadorSensor) + "_on").c_str(), valorPredeterminado);
+  preferencias.end();
+  return habilitado;
 }
-int cfgSensorPin(const char* id, int def) {
-  Preferences p; p.begin(NS, false);
-  const int v = p.getInt((String(id) + "_pin").c_str(), def);
-  p.end(); return v;
+
+int pinSensorEnConfiguracion(const char* identificadorSensor, int pinPredeterminado) {
+  Preferences preferencias;
+  preferencias.begin(NOMBRE_ESPACIO_NVS, false);
+  const int pin = preferencias.getInt(
+      (String(identificadorSensor) + "_pin").c_str(), pinPredeterminado);
+  preferencias.end();
+  return pin;
 }
-void cfgSensorGuardar(const char* id, bool on, int pin) {
-  Preferences p; p.begin(NS, false);
-  p.putBool((String(id) + "_on").c_str(), on);
-  p.putInt((String(id) + "_pin").c_str(), pin);
-  p.end();
+
+void guardarConfiguracionDelSensor(const char* identificadorSensor, bool habilitado, int pin) {
+  Preferences preferencias;
+  preferencias.begin(NOMBRE_ESPACIO_NVS, false);
+  preferencias.putBool((String(identificadorSensor) + "_on").c_str(), habilitado);
+  preferencias.putInt((String(identificadorSensor) + "_pin").c_str(), pin);
+  preferencias.end();
 }

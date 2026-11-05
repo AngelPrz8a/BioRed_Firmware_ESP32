@@ -32,14 +32,14 @@ namespace {
   }
 }
 
-void redInit() {
+void iniciarRed() {
   WiFi.persistent(false);
   WiFi.setAutoReconnect(true);
   WiFi.setSleep(false);            // reduce latencia en módulos que requieren respuesta rápida
-  if (cfg.wifiSsid[0]) {
+  if (configuracion.nombreRedWifi[0]) {
     WiFi.mode(WIFI_STA);
-    WiFi.begin(cfg.wifiSsid, cfg.wifiPass);
-    Serial.printf("[Red] Conectando a %s", cfg.wifiSsid);
+    WiFi.begin(configuracion.nombreRedWifi, configuracion.contrasenaRedWifi);
+    Serial.printf("[Red] Conectando a %s", configuracion.nombreRedWifi);
     const uint32_t t0 = millis();
     while (WiFi.status() != WL_CONNECTED && millis() - t0 < 15000) { delay(250); Serial.print("."); }
     Serial.println();
@@ -48,21 +48,21 @@ void redInit() {
   else iniciarAP();
 }
 
-void redLoop() {
+void actualizarRed() {
   if (!ap) return;
   dns.processNextRequest();
   if (WiFi.status() == WL_CONNECTED) { detenerAP(); anunciar(); return; }
-  if (cfg.wifiSsid[0] && millis() - ultReintento > 60000) {   // reintenta la red guardada cada minuto
+  if (configuracion.nombreRedWifi[0] && millis() - ultReintento > 60000) {   // reintenta la red guardada cada minuto
     ultReintento = millis();
-    WiFi.begin(cfg.wifiSsid, cfg.wifiPass);
+    WiFi.begin(configuracion.nombreRedWifi, configuracion.contrasenaRedWifi);
   }
 }
 
-bool   redConectada() { return WiFi.status() == WL_CONNECTED; }
-bool   redModoAP()    { return ap; }
-String redIP()        { return redConectada() ? WiFi.localIP().toString() : ap ? WiFi.softAPIP().toString() : String("—"); }
+bool   wifiConectado() { return WiFi.status() == WL_CONNECTED; }
+bool   modoPuntoAcceso()    { return ap; }
+String obtenerDireccionIp()        { return wifiConectado() ? WiFi.localIP().toString() : ap ? WiFi.softAPIP().toString() : String("—"); }
 
-String redRedesJson() {
+String obtenerRedesComoJson() {
   const int n = WiFi.scanComplete();
   if (n < 0) {                                   // sin escaneo previo o en curso
     if (n != WIFI_SCAN_RUNNING) WiFi.scanNetworks(true);

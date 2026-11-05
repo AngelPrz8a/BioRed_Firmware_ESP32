@@ -84,10 +84,40 @@ y la configuración se guarda en NVS.
   reinician la placa.
 - Cada sensor implementa la interfaz de `src/sensores/Sensor.h`; el registro
   consulta los módulos compilados y actualiza los activos en el ciclo principal.
+- La configuración central se representa con `Configuracion` en
+  `src/nucleo/Config.h`. Sus campos tienen nombres descriptivos; las claves
+  internas de NVS se mantienen para conservar los ajustes guardados.
 - API y MQTT solo envían datos si están compilados, habilitados en el portal,
   configurados y conectados a WiFi.
 - Las preferencias permanecen en NVS entre reinicios. Un cambio de opción de
   compilación no borra automáticamente preferencias guardadas anteriormente.
+
+### Interfaz para añadir un sensor
+
+Cada clase de sensor hereda de `Sensor` e implementa los métodos de
+`src/sensores/Sensor.h`:
+
+| Método | Responsabilidad |
+|---|---|
+| `identificador()` | Devuelve el identificador estable del sensor, por ejemplo `dht22`. |
+| `nombreParaMostrar()` | Devuelve el nombre legible que aparece en el portal. |
+| `pinPredeterminado()` | Indica el GPIO inicial cuando aún no hay uno guardado. |
+| `iniciar(pin)` | Inicializa el sensor con el GPIO configurado. |
+| `actualizar()` | Actualiza sus lecturas sin bloquear el ciclo principal. |
+| `estadoActual()` | Describe el estado que muestra el portal. |
+| `obtenerLecturas(...)` | Copia las lecturas vigentes para el portal y MQTT. |
+| `agregarLecturasAlJsonApi(...)` | Añade las lecturas al documento enviado a la API. |
+
+El registro en `src/nucleo/Registro.cpp` coordina el inicio y la actualización.
+El portal y las salidas consultan el mismo contrato, así que cualquier cambio
+en esos nombres debe actualizar también sus declaraciones, implementaciones y
+usos.
+
+Los nombres internos del código pueden mejorarse coordinadamente. No se deben
+cambiar como parte de una limpieza de nombres las claves NVS, las rutas HTTP,
+los campos JSON, los topics MQTT ni el formato de datos de la API: son
+interfaces externas y su modificación podría afectar configuraciones o
+integraciones existentes.
 
 ## Activación y desactivación de módulos
 

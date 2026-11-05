@@ -22,8 +22,8 @@ namespace {
   // Con clave de portal configurada se pide usuario "admin". En modo AP no se pide
   // (la red de configuración ya está protegida y así nunca queda uno fuera).
   bool autorizado() {
-    if (!cfg.portalPass[0] || redModoAP()) return true;
-    if (server.authenticate("admin", cfg.portalPass)) return true;
+    if (!configuracion.contrasenaPortal[0] || modoPuntoAcceso()) return true;
+    if (server.authenticate("admin", configuracion.contrasenaPortal)) return true;
     server.requestAuthentication();
     return false;
   }
@@ -62,27 +62,27 @@ namespace {
     doc["motores"] = BIORED_MODULO_MOTORES;
 
     JsonObject w = doc.createNestedObject("wifi");
-    w["ok"] = redConectada(); w["ap"] = redModoAP(); w["ip"] = redIP(); w["rssi"] = WiFi.RSSI();
+    w["ok"] = wifiConectado(); w["ap"] = modoPuntoAcceso(); w["ip"] = obtenerDireccionIp(); w["rssi"] = WiFi.RSSI();
 
-    const EstadoApi& a = salidaApiEstado();
+    const EstadoEnvioApi& a = obtenerEstadoEnvioApi();
     JsonObject ja = doc.createNestedObject("api");
-    ja["on"] = BIORED_SALIDA_API && cfg.apiOn; ja["ultimo"] = a.ultimoCodigo; ja["enviados"] = a.enviados;
+    ja["on"] = BIORED_SALIDA_API && configuracion.apiHabilitada; ja["ultimo"] = a.ultimoCodigo; ja["enviados"] = a.enviados;
 
-    const EstadoMqtt& m = salidaMqttEstado();
+    const EstadoConexionMqtt& m = obtenerEstadoMqtt();
     JsonObject jm = doc.createNestedObject("mqtt");
-    jm["on"] = BIORED_SALIDA_MQTT && cfg.mqttOn; jm["ok"] = m.conectado;
+    jm["on"] = BIORED_SALIDA_MQTT && configuracion.mqttHabilitado; jm["ok"] = m.conectado;
     jm["publicados"] = m.publicados; jm["error"] = m.error;
 
     JsonArray arr = doc.createNestedArray("sensores");
-    for (int i = 0; i < registroCantidad(); i++) {
+    for (int i = 0; i < cantidadSensoresRegistrados(); i++) {
       JsonObject o = arr.createNestedObject();
-      o["id"] = registroSensor(i)->id();
-      o["nombre"] = registroSensor(i)->nombre();
-      o["on"] = registroActivo(i);
-      o["estado"] = registroSensor(i)->estado();
+      o["id"] = obtenerSensorRegistrado(i)->identificador();
+      o["nombre"] = obtenerSensorRegistrado(i)->nombreParaMostrar();
+      o["on"] = sensorRegistradoActivo(i);
+      o["estado"] = obtenerSensorRegistrado(i)->estadoActual();
       JsonObject d = o.createNestedObject("datos");
-      Dato buf[8];
-      const int n = registroDatos(i, buf, 8);
+      LecturaSensor buf[8];
+      const int n = obtenerLecturasSensor(i, buf, 8);
       for (int k = 0; k < n; k++) d[buf[k].clave] = String(buf[k].valor, 1) + " " + buf[k].unidad;
     }
     enviarJson(doc);
@@ -91,18 +91,18 @@ namespace {
   void handleGetConfig() {   // nunca devuelve claves: solo si están guardadas
     if (!autorizado()) return;
     DynamicJsonDocument doc(2048);
-    doc["wifi"]["ssid"] = cfg.wifiSsid;
+    doc["wifi"]["ssid"] = configuracion.nombreRedWifi;
     JsonObject a = doc.createNestedObject("api");
-    a["on"] = cfg.apiOn; a["url"] = cfg.apiUrl; a["keySet"] = cfg.apiKey[0] != '\0'; a["intervalo"] = cfg.apiIntervaloS;
+    a["on"] = configuracion.apiHabilitada; a["url"] = configuracion.urlApi; a["keySet"] = configuracion.claveApi[0] != '\0'; a["intervalo"] = configuracion.intervaloApiSegundos;
     JsonObject m = doc.createNestedObject("mqtt");
-    m["on"] = cfg.mqttOn; m["host"] = cfg.mqttHost; m["port"] = cfg.mqttPort; m["user"] = cfg.mqttUser;
-    m["passSet"] = cfg.mqttPass[0] != '\0'; m["raiz"] = cfg.mqttRaiz; m["modulo"] = cfg.mqttModulo; m["intervalo"] = cfg.mqttIntervaloS;
-    doc["portalPassSet"] = cfg.portalPass[0] != '\0';
+    m["on"] = configuracion.mqttHabilitado; m["host"] = configuracion.servidorMqtt; m["port"] = configuracion.puertoMqtt; m["user"] = configuracion.usuarioMqtt;
+    m["passSet"] = configuracion.contrasenaMqtt[0] != '\0'; m["raiz"] = configuracion.raizTopicsMqtt; m["modulo"] = configuracion.nombreEstacionMqtt; m["intervalo"] = configuracion.intervaloMqttSegundos;
+    doc["portalPassSet"] = configuracion.contrasenaPortal[0] != '\0';
     JsonArray arr = doc.createNestedArray("sensores");
-    for (int i = 0; i < registroCantidad(); i++) {
+    for (int i = 0; i < cantidadSensoresRegistrados(); i++) {
       JsonObject o = arr.createNestedObject();
-      o["id"] = registroSensor(i)->id(); o["nombre"] = registroSensor(i)->nombre();
-      o["on"] = registroActivo(i);       o["pin"] = registroPin(i);
+      o["id"] = obtenerSensorRegistrado(i)->identificador(); o["nombre"] = obtenerSensorRegistrado(i)->nombreParaMostrar();
+      o["on"] = sensorRegistradoActivo(i);       o["pin"] = pinSensorRegistrado(i);
     }
     enviarJson(doc);
   }
@@ -117,62 +117,62 @@ namespace {
     if (!w.isNull()) {
       const char* ssid = w["ssid"] | "";
       if (ssid[0]) {
-        const bool cambio = strcmp(ssid, cfg.wifiSsid) != 0;
+        const bool cambio = strcmp(ssid, configuracion.nombreRedWifi) != 0;
         const char* pass = w["pass"] | "";
-        strlcpy(cfg.wifiSsid, ssid, sizeof cfg.wifiSsid);
-        if (cambio || pass[0]) strlcpy(cfg.wifiPass, pass, sizeof cfg.wifiPass);
+        strlcpy(configuracion.nombreRedWifi, ssid, sizeof configuracion.nombreRedWifi);
+        if (cambio || pass[0]) strlcpy(configuracion.contrasenaRedWifi, pass, sizeof configuracion.contrasenaRedWifi);
         reiniciar = true;
       }
     }
     JsonObject a = d["api"];
     if (!a.isNull()) {
-      cfg.apiOn = a["on"] | cfg.apiOn;
-      texto(a, "url", cfg.apiUrl, sizeof cfg.apiUrl);
-      if (!cfg.apiUrl[0]) strlcpy(cfg.apiUrl, BIORED_API_URL_DEFECTO, sizeof cfg.apiUrl);
-      secreto(a, "key", cfg.apiKey, sizeof cfg.apiKey);
-      cfg.apiIntervaloS = limitar(a["intervalo"] | cfg.apiIntervaloS, 10, 3600);
+      configuracion.apiHabilitada = a["on"] | configuracion.apiHabilitada;
+      texto(a, "url", configuracion.urlApi, sizeof configuracion.urlApi);
+      if (!configuracion.urlApi[0]) strlcpy(configuracion.urlApi, BIORED_API_URL_DEFECTO, sizeof configuracion.urlApi);
+      secreto(a, "key", configuracion.claveApi, sizeof configuracion.claveApi);
+      configuracion.intervaloApiSegundos = limitar(a["intervalo"] | configuracion.intervaloApiSegundos, 10, 3600);
     }
     JsonObject m = d["mqtt"];
     if (!m.isNull()) {
-      cfg.mqttOn = m["on"] | cfg.mqttOn;
-      texto(m, "host", cfg.mqttHost, sizeof cfg.mqttHost);
-      texto(m, "user", cfg.mqttUser, sizeof cfg.mqttUser);
-      secreto(m, "pass", cfg.mqttPass, sizeof cfg.mqttPass);
-      texto(m, "raiz", cfg.mqttRaiz, sizeof cfg.mqttRaiz);
-      texto(m, "modulo", cfg.mqttModulo, sizeof cfg.mqttModulo);
-      segmento(cfg.mqttRaiz); segmento(cfg.mqttModulo);
-      if (!cfg.mqttRaiz[0]) strcpy(cfg.mqttRaiz, "sensores");
-      if (!cfg.mqttModulo[0]) strcpy(cfg.mqttModulo, "sensor-1");
-      const uint32_t pt = m["port"] | (uint32_t)cfg.mqttPort;
-      cfg.mqttPort = pt ? pt : 1883;
-      cfg.mqttIntervaloS = limitar(m["intervalo"] | cfg.mqttIntervaloS, 2, 3600);
+      configuracion.mqttHabilitado = m["on"] | configuracion.mqttHabilitado;
+      texto(m, "host", configuracion.servidorMqtt, sizeof configuracion.servidorMqtt);
+      texto(m, "user", configuracion.usuarioMqtt, sizeof configuracion.usuarioMqtt);
+      secreto(m, "pass", configuracion.contrasenaMqtt, sizeof configuracion.contrasenaMqtt);
+      texto(m, "raiz", configuracion.raizTopicsMqtt, sizeof configuracion.raizTopicsMqtt);
+      texto(m, "modulo", configuracion.nombreEstacionMqtt, sizeof configuracion.nombreEstacionMqtt);
+      segmento(configuracion.raizTopicsMqtt); segmento(configuracion.nombreEstacionMqtt);
+      if (!configuracion.raizTopicsMqtt[0]) strcpy(configuracion.raizTopicsMqtt, "sensores");
+      if (!configuracion.nombreEstacionMqtt[0]) strcpy(configuracion.nombreEstacionMqtt, "sensor-1");
+      const uint32_t pt = m["port"] | (uint32_t)configuracion.puertoMqtt;
+      configuracion.puertoMqtt = pt ? pt : 1883;
+      configuracion.intervaloMqttSegundos = limitar(m["intervalo"] | configuracion.intervaloMqttSegundos, 2, 3600);
     }
     const char* pp = d["portalPass"] | "";
-    if (pp[0]) strlcpy(cfg.portalPass, pp, sizeof cfg.portalPass);
+    if (pp[0]) strlcpy(configuracion.contrasenaPortal, pp, sizeof configuracion.contrasenaPortal);
 
     JsonArray ss = d["sensores"];
     if (!ss.isNull()) {
-      for (JsonObject s : ss) registroConfigurar(s["id"] | "", s["on"] | false, s["pin"] | -1);
+      for (JsonObject s : ss) configurarSensorRegistrado(s["id"] | "", s["on"] | false, s["pin"] | -1);
       reiniciar = true;   // los pines y sensores se aplican al arrancar
     }
 
-    cfgGuardar();
-    salidaMqttAplicar();
+    guardarConfiguracion();
+    reconectarMqtt();
     server.send(200, "application/json", "{\"ok\":true}");
     if (reiniciar) { delay(500); ESP.restart(); }
   }
 
   void handleRedes() {
-    if (autorizado()) server.send(200, "application/json", redRedesJson());
+    if (autorizado()) server.send(200, "application/json", obtenerRedesComoJson());
   }
 
 #if BIORED_MODULO_MOTORES
   void handleMover() {
     if (!autorizado()) return;
     if (!server.hasArg("dir")) { server.send(400, "application/json", "{\"ok\":false,\"error\":\"Falta dir\"}"); return; }
-    int pasos = server.hasArg("pasos") ? server.arg("pasos").toInt() : motoresPasosPorDefecto();
+    int pasos = server.hasArg("pasos") ? server.arg("pasos").toInt() : pasosPredeterminadosMotor();
     String error;
-    const bool ok = motoresMover(server.arg("dir"), pasos, error);
+    const bool ok = moverMotor(server.arg("dir"), pasos, error);
     StaticJsonDocument<128> r;
     r["ok"] = ok; r["pasos"] = pasos;
     if (!ok) r["error"] = error;
@@ -181,7 +181,7 @@ namespace {
 #endif
 }
 
-void portalInit() {
+void iniciarPortal() {
   server.on("/", HTTP_GET, handleRaiz);
   server.on("/api/estado", HTTP_GET, handleEstado);
   server.on("/api/config", HTTP_GET, handleGetConfig);
@@ -191,12 +191,12 @@ void portalInit() {
   server.on("/api/mover", HTTP_GET, handleMover);
 #endif
 #if BIORED_MODULO_CAMARA
-  server.on("/resources/cam/cam-lo.jpg", HTTP_GET, [] { if (autorizado()) camaraHandleJpgLo(); });
-  server.on("/resources/cam/cam-hi.jpg", HTTP_GET, [] { if (autorizado()) camaraHandleJpgHi(); });
-  server.on("/resources/cam/live",       HTTP_GET, [] { if (autorizado()) camaraHandleStream(); });
+  server.on("/resources/cam/cam-lo.jpg", HTTP_GET, [] { if (autorizado()) enviarFotoCamaraBajaResolucion(); });
+  server.on("/resources/cam/cam-hi.jpg", HTTP_GET, [] { if (autorizado()) enviarFotoCamaraAltaResolucion(); });
+  server.on("/resources/cam/live",       HTTP_GET, [] { if (autorizado()) transmitirVideoCamara(); });
 #endif
   server.onNotFound([] {
-    if (redModoAP()) {   // portal cautivo: cualquier ruta lleva al portal
+    if (modoPuntoAcceso()) {   // portal cautivo: cualquier ruta lleva al portal
       server.sendHeader("Location", "http://" + WiFi.softAPIP().toString() + "/", true);
       server.send(302, "text/plain", "");
     } else {
@@ -207,4 +207,4 @@ void portalInit() {
   Serial.println("[Portal] Servidor web en el puerto 80");
 }
 
-void portalLoop() { server.handleClient(); }
+void atenderPortal() { server.handleClient(); }

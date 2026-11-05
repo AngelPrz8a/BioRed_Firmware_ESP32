@@ -5,12 +5,12 @@
 // Envío HTTPS a una API configurada por el usuario, con credencial opcional.
 // Corre en su propia tarea (núcleo 0) para que el
 // handshake TLS no detenga el portal, la cámara ni el micrófono.
-struct EstadoApi { uint32_t enviados; uint32_t fallidos; int ultimoCodigo; };
+struct EstadoEnvioApi { uint32_t enviados; uint32_t fallidos; int ultimoCodigo; };
 
 #if BIORED_SALIDA_API
-void salidaApiInit();                 // después de redInit()
-const EstadoApi& salidaApiEstado();
+void iniciarEnvioApi();                 // después de iniciarRed()
+const EstadoEnvioApi& obtenerEstadoEnvioApi();
 #else
-inline void salidaApiInit() {}
-inline const EstadoApi& salidaApiEstado() { static EstadoApi e = {0, 0, 0}; return e; }
+inline void iniciarEnvioApi() {}
+inline const EstadoEnvioApi& obtenerEstadoEnvioApi() { static EstadoEnvioApi e = {0, 0, 0}; return e; }
 #endif

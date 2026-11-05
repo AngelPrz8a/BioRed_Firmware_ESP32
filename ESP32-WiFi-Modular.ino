@@ -30,22 +30,22 @@ void setup() {
   Serial.printf("\n=== ESP32 WiFi Modular %s ===\n", BIORED_VERSION);
   analogReadResolution(12);
 
-  cfgCargar();        // configuración guardada (wifi, API, MQTT, sensores)
-  registroInit();     // arranca los sensores activos (MQ135 calienta sin bloquear)
+  cargarConfiguracion();        // configuración guardada (wifi, API, MQTT, sensores)
+  iniciarRegistroSensores();     // arranca los sensores activos (MQ135 calienta sin bloquear)
 #if BIORED_MODULO_MOTORES
-  motoresInit();
+  inicializarMotores();
 #endif
 #if BIORED_MODULO_CAMARA
-  camaraInit();
+  inicializarCamara();
 #endif
-  redInit();          // STA con lo guardado o punto de acceso de configuración
-  portalInit();
-  salidaApiInit();
-  salidaMqttInit();
+  iniciarRed();          // STA con lo guardado o punto de acceso de configuración
+  iniciarPortal();
+  iniciarEnvioApi();
+  iniciarPublicacionMqtt();
 }
 
 void loop() {
-  portalLoop();
-  redLoop();
-  registroActualizar();
+  atenderPortal();
+  actualizarRed();
+  actualizarRegistroSensores();
 }

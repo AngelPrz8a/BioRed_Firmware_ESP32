@@ -4,12 +4,12 @@
 
 // Registro de sensores. Crea los que estén compilados, arranca los activados
 // en el portal y serializa el acceso (loop() escribe, las tareas de envío leen).
-void    registroInit();
-void    registroActualizar();                 // llamar en loop()
-int     registroCantidad();
-Sensor* registroSensor(int i);
-bool    registroActivo(int i);                // estado en ejecución
-int     registroPin(int i);
-void    registroConfigurar(const char* id, bool on, int pin);   // guarda; aplica al reiniciar
-int     registroDatos(int i, Dato* out, int max);
-bool    registroArmarApi(JsonDocument& doc);  // añade las secciones de los sensores activos
+void iniciarRegistroSensores();
+void actualizarRegistroSensores();  // Llamar desde loop().
+int cantidadSensoresRegistrados();
+Sensor* obtenerSensorRegistrado(int indice);
+bool sensorRegistradoActivo(int indice);
+int pinSensorRegistrado(int indice);
+void configurarSensorRegistrado(const char* identificadorSensor, bool activo, int pin);
+int obtenerLecturasSensor(int indice, LecturaSensor* lecturas, int capacidad);
+bool agregarSensoresAlJsonApi(JsonDocument& documento);

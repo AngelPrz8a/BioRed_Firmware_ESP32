@@ -40,7 +40,7 @@ namespace {
   }
 }
 
-bool camaraInit() {
+bool inicializarCamara() {
   Serial.printf("[Camara] PSRAM: %s (%u bytes)\n", psramFound() ? "OK" : "NO", (unsigned)ESP.getPsramSize());
   esp32cam::setLogger(Serial);
   using namespace esp32cam;
@@ -54,10 +54,10 @@ bool camaraInit() {
   return camOk;   // antes se quedaba bloqueado; ahora el portal sigue disponible
 }
 
-void camaraHandleJpgLo() { serveJpg(camLoRes); }
-void camaraHandleJpgHi() { serveJpg(camHiRes); }
+void enviarFotoCamaraBajaResolucion() { serveJpg(camLoRes); }
+void enviarFotoCamaraAltaResolucion() { serveJpg(camHiRes); }
 
-void camaraHandleStream() {
+void transmitirVideoCamara() {
   if (!camOk) { server.send(503, "text/plain", "Camara no disponible"); return; }
   WiFiClient client = server.client();
   ajustarResolucion(camStreamRes);

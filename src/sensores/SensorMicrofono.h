@@ -68,23 +68,23 @@ class SensorMicrofono : public Sensor {
   }
 
  public:
-  const char* id() const override     { return "audio"; }
-  const char* nombre() const override { return "MAX9814 (micrófono)"; }
-  int pinPorDefecto() const override  { return 19; }
+  const char* identificador() const override     { return "audio"; }
+  const char* nombreParaMostrar() const override { return "MAX9814 (micrófono)"; }
+  int pinPredeterminado() const override  { return 19; }
 
-  void begin(int pin) override {
+  void iniciar(int pin) override {
     pin_ = pin;
     nuevaVentana(); nuevoIntervalo();
     proxUs_ = micros();
   }
 
-  void update() override { muestrear(); cerrarVentana(); consolidar(); }
+  void actualizar() override { muestrear(); cerrarVentana(); consolidar(); }
 
-  const char* estado() const override {
+  const char* estadoActual() const override {
     return l_.ts == 0 ? "midiendo" : l_.valida ? "ok" : "verificar cableado";
   }
 
-  int datos(Dato* out, int max) const override {
+  int obtenerLecturas(LecturaSensor* out, int max) const override {
     if (l_.ts == 0 || max < 3) return 0;
     out[0] = {"nivel", l_.db,   "dB"};
     out[1] = {"rms",   l_.rms,  "mV"};
@@ -92,13 +92,13 @@ class SensorMicrofono : public Sensor {
     return 3;
   }
 
-  void aApi(JsonDocument& doc) const override {
+  void agregarLecturasAlJsonApi(JsonDocument& doc) const override {
     if (l_.ts == 0) return;
     JsonObject a = doc.createNestedObject("audio");
     a["valid"]           = l_.valida;
-    a["rms_mv"]          = acotar(l_.rms, 0, 99999.99, 2);
-    a["peak_to_peak_mv"] = acotar(l_.pico, 0, 99999.99, 2);
-    a["offset_mv"]       = acotar(l_.offset, 0, 99999.9, 1);
+    a["rms_mv"]          = limitarYRedondear(l_.rms, 0, 99999.99, 2);
+    a["peak_to_peak_mv"] = limitarYRedondear(l_.pico, 0, 99999.99, 2);
+    a["offset_mv"]       = limitarYRedondear(l_.offset, 0, 99999.9, 1);
     a["sample_rate_hz"]  = (uint32_t)(l_.fs > 65535 ? 65535 : l_.fs);
   }
 };
