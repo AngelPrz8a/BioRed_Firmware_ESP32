@@ -35,7 +35,7 @@ namespace {
 void redInit() {
   WiFi.persistent(false);
   WiFi.setAutoReconnect(true);
-  WiFi.setSleep(false);            // menos lag en cámara y motores
+  WiFi.setSleep(false);            // reduce latencia en módulos que requieren respuesta rápida
   if (cfg.wifiSsid[0]) {
     WiFi.mode(WIFI_STA);
     WiFi.begin(cfg.wifiSsid, cfg.wifiPass);

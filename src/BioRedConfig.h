@@ -1,14 +1,11 @@
 #pragma once
-// ═══════════════════════════════════════════════════════════════
-//  Interruptores de compilación de BioRed.
-//  Pon 0 en un módulo para quitarlo: no se compila y su librería
-//  de Arduino deja de ser necesaria.
-// ═══════════════════════════════════════════════════════════════
+// Interruptores de compilación: 0 desactiva y 1 incluye el módulo.
+// Los módulos opcionales se compilan desactivados por defecto.
 #define BIORED_VERSION "4.0.0"
 
 // Sensores (cada uno es un archivo en src/sensores/)
 #ifndef BIORED_SENSOR_DHT22
-#define BIORED_SENSOR_DHT22      1
+#define BIORED_SENSOR_DHT22      0
 #endif
 #ifndef BIORED_SENSOR_MQ135
 #define BIORED_SENSOR_MQ135      0
@@ -22,7 +19,7 @@
 #define BIORED_SALIDA_API        0   // HTTPS + key de dispositivo
 #endif
 #ifndef BIORED_SALIDA_MQTT
-#define BIORED_SALIDA_MQTT       1   // broker MQTT
+#define BIORED_SALIDA_MQTT       0   // broker MQTT
 #endif
 
 // Módulos opcionales (no son sensores)
@@ -34,7 +31,7 @@
 #endif
 
 // Valores de fábrica (luego se cambian desde el portal)
-#define BIORED_API_URL_DEFECTO   "https://biored-analytic.brayan36.com/api/v1/readings/ingest"
-#define BIORED_AP_SSID           "BioRed-Setup"
-#define BIORED_AP_PASS           "biored1234"   // mínimo 8 caracteres
-#define BIORED_HOSTNAME          "biored"       // http://biored.local
+#define BIORED_API_URL_DEFECTO   ""
+#define BIORED_AP_SSID           "ESP32-Setup"
+#define BIORED_AP_PASS           "esp32setup"   // cámbiese; mínimo 8 caracteres
+#define BIORED_HOSTNAME          "esp32-device" // http://esp32-device.local

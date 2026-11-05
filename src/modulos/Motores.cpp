@@ -26,7 +26,7 @@ bool motoresMover(const String& dir, int& pasos, String& error) {
   else if (dir == "ABAJO")  motorTilt.step(-pasos);
   else if (dir == "IZQ")    motorPan.step( pasos);
   else if (dir == "DER")    motorPan.step(-pasos);
-  else { error = "Dirección inválida. Usa ARRIBA, ABAJO, IZQ o DER"; return false; }
+  else { error = "Dirección inválida. Valores admitidos: ARRIBA, ABAJO, IZQ o DER"; return false; }
   Serial.printf("[Motor] %s %d pasos\n", dir.c_str(), pasos);
   return true;
 }

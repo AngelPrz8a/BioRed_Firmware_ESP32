@@ -26,7 +26,7 @@ namespace {
 
   void alta(Sensor* s) {
     if (n >= 8) return;
-    const bool on = cfgSensorOn(s->id(), true);
+    const bool on = cfgSensorOn(s->id(), false);
     const int pin = cfgSensorPin(s->id(), s->pinPorDefecto());
     if (on) { s->begin(pin); Serial.printf("[Registro] %s activo en GPIO%d\n", s->id(), pin); }
     lista[n++] = {s, on, pin};
@@ -35,7 +35,7 @@ namespace {
 
 void registroInit() {
   mtx = xSemaphoreCreateMutex();
-  // Un bloque por sensor: para quitar uno basta con ponerlo en 0 en BioRedConfig.h
+  // Cada sensor requiere su interruptor en BioRedConfig.h y habilitarse en el portal.
 #if BIORED_SENSOR_DHT22
   static SensorDHT22 dht;        alta(&dht);
 #endif

@@ -9,8 +9,8 @@ namespace {
   const float    MIC_GANANCIA_DB = 50.0f;
 }
 
-// MAX9814 en GPIO19 (ADC2): con WiFi activo puede haber lecturas erráticas
-// ocasionales (limitación de hardware del ESP32).
+// El MAX9814 usa un pin ADC: la compatibilidad con WiFi depende del ADC y del
+// pin disponible en la placa.
 class SensorMicrofono : public Sensor {
   struct Ventana   { double suma = 0, sumaCuad = 0; uint32_t minimo = UINT32_MAX, maximo = 0, n = 0, inicioMs = 0; };
   struct Intervalo { double sumaRms2 = 0, sumaOffset = 0; float pico = 0; uint32_t ventanas = 0, muestras = 0, inicioMs = 0; };
@@ -81,7 +81,7 @@ class SensorMicrofono : public Sensor {
   void update() override { muestrear(); cerrarVentana(); consolidar(); }
 
   const char* estado() const override {
-    return l_.ts == 0 ? "midiendo" : l_.valida ? "ok" : "revisar cableado";
+    return l_.ts == 0 ? "midiendo" : l_.valida ? "ok" : "verificar cableado";
   }
 
   int datos(Dato* out, int max) const override {

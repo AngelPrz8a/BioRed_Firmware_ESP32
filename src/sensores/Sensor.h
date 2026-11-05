@@ -8,7 +8,7 @@ struct Dato { const char* clave; float valor; const char* unidad; };
 
 // Contrato que cumple cada sensor. Para añadir uno nuevo:
 //   1. Crear src/sensores/SensorXxx.h con una clase que herede de Sensor.
-//   2. Añadir un interruptor en BioRedConfig.h y 3 líneas en Registro.cpp.
+//   2. Añadir un interruptor en BioRedConfig.h y registrarlo en Registro.cpp.
 class Sensor {
  public:
   virtual ~Sensor() {}

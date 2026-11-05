@@ -50,7 +50,7 @@ bool camaraInit() {
   c.setBufferCount(2);
   c.setJpeg(80);
   camOk = Camera.begin(c);
-  Serial.println(camOk ? "[Camara] OK" : "[Camara] FAIL: revisa pines y Tools > PSRAM = OPI PSRAM");
+  Serial.println(camOk ? "[Camara] OK" : "[Camara] FAIL: verificar pines y Tools > PSRAM = OPI PSRAM");
   return camOk;   // antes se quedaba bloqueado; ahora el portal sigue disponible
 }
 

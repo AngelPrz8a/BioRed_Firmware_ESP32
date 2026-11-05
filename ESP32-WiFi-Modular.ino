@@ -1,12 +1,13 @@
 /*
-  BioRed v4 — firmware unificado (ESP32-S3 WROOM N16R8, Freenove)
+  Firmware modular para placas ESP32 con WiFi (Arduino-ESP32).
 
   Sensores como módulos     src/sensores/*.h      (se activan en BioRedConfig.h y en el portal)
-  Salidas de datos          SalidaAPI (HTTPS + key)  y  SalidaMQTT (broker)
-  Portal de configuración   Portal + Red          (WiFi, sensores, API, MQTT, cámara)
+  Salidas de datos          API HTTPS y MQTT      (opcionales)
+  Portal de configuración   Portal + WiFi         (credenciales, sensores y salidas)
 
-  Pines: DHT22 14 · MQ135 3 · MAX9814 19 · tilt 1,42,2,41 · pan 48,21,47,20 · cámara 4-13,15-18
-  Plugin necesario: ninguno (el portal va en flash; ya no se usa LittleFS).
+  Los GPIO predeterminados y los módulos de cámara/motores dependen de la placa.
+  Se recomienda consultar README.md antes de conectar o habilitar módulos.
+  Plugin necesario: ninguno (el portal está integrado; no se usa LittleFS).
 */
 #include <Arduino.h>
 #include "src/BioRedConfig.h"
@@ -26,7 +27,7 @@
 void setup() {
   Serial.begin(115200);
   delay(1000);
-  Serial.printf("\n=== BioRed %s ===\n", BIORED_VERSION);
+  Serial.printf("\n=== ESP32 WiFi Modular %s ===\n", BIORED_VERSION);
   analogReadResolution(12);
 
   cfgCargar();        // configuración guardada (wifi, API, MQTT, sensores)

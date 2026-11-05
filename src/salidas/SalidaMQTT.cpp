@@ -36,7 +36,7 @@ namespace {
     mqtt.setServer(cfg.mqttHost, cfg.mqttPort);
     char estadoTopic[80]; topic(estadoTopic, sizeof estadoTopic, "estado");
     String m = WiFi.macAddress(); m.replace(":", "");
-    const String cid = "biored-" + m.substring(6);
+    const String cid = "esp32-" + m.substring(6);
     const bool conUsuario = cfg.mqttUser[0] != '\0';
     const bool ok = mqtt.connect(cid.c_str(),
                                  conUsuario ? cfg.mqttUser : nullptr,

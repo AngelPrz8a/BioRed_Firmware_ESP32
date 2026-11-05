@@ -4,7 +4,7 @@
 // Configuración persistente (NVS). Se edita desde el portal.
 struct Cfg {
   char wifiSsid[33], wifiPass[65];
-  // API BioRed (HTTPS + key de dispositivo)
+  // API HTTPS opcional (URL y credencial configuradas por el usuario)
   bool     apiOn;
   char     apiUrl[160], apiKey[96], deviceUid[18];
   uint32_t apiIntervaloS;

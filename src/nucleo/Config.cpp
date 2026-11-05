@@ -25,7 +25,7 @@ void cfgCargar() {
   leer(p, "mq_host", cfg.mqttHost, sizeof cfg.mqttHost, "");
   leer(p, "mq_user", cfg.mqttUser, sizeof cfg.mqttUser, "");
   leer(p, "mq_pass", cfg.mqttPass, sizeof cfg.mqttPass, "");
-  leer(p, "mq_raiz", cfg.mqttRaiz, sizeof cfg.mqttRaiz, "biored");
+  leer(p, "mq_raiz", cfg.mqttRaiz, sizeof cfg.mqttRaiz, "sensores");
   leer(p, "mq_mod", cfg.mqttModulo, sizeof cfg.mqttModulo, "sensor-1");
   cfg.mqttPort = p.getUShort("mq_port", 1883);
   cfg.mqttIntervaloS = p.getUInt("mq_int", 10);

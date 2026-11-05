@@ -2,8 +2,8 @@
 #include <Arduino.h>
 #include "../BioRedConfig.h"
 
-// Envío por HTTPS a la API de BioRed (POST /api/v1/readings/ingest) con la
-// key de dispositivo. Corre en su propia tarea (núcleo 0) para que el
+// Envío HTTPS a una API configurada por el usuario, con credencial opcional.
+// Corre en su propia tarea (núcleo 0) para que el
 // handshake TLS no detenga el portal, la cámara ni el micrófono.
 struct EstadoApi { uint32_t enviados; uint32_t fallidos; int ultimoCodigo; };
 

@@ -3,7 +3,7 @@
 
 // Portal completo en una sola página: sin LittleFS, sin fuentes ni librerías externas.
 const char PORTAL_HTML[] PROGMEM = R"HTML(<!doctype html><html lang=es><head><meta charset=utf-8>
-<meta name=viewport content="width=device-width,initial-scale=1"><title>BioRed</title>
+<meta name=viewport content="width=device-width,initial-scale=1"><title>ESP32 WiFi Modular</title>
 <style>
 :root{--bg:#f3f6f3;--cd:#fff;--tx:#16221a;--mu:#66786c;--bd:#d9e3db;--ac:#2d8a4b;--er:#c0392b}
 @media(prefers-color-scheme:dark){:root{--bg:#0d130f;--cd:#141c16;--tx:#e2eee5;--mu:#8a9b8f;--bd:#243127;--ac:#4cb36d;--er:#e0675a}}
@@ -41,7 +41,7 @@ small,.mu{color:var(--mu);font-size:13px}
 img{width:100%;border-radius:8px;background:var(--bd);min-height:140px;display:block}
 .btns{display:flex;gap:8px;margin-top:10px}.btns button{flex:1;padding:9px;border:1px solid var(--bd);border-radius:8px;background:var(--cd);color:var(--tx);font:inherit;cursor:pointer}
 </style></head><body><main>
-<header><h1>BioRed</h1><span id=pills class=mu></span></header>
+<header><h1>ESP32 WiFi Modular</h1><span id=pills class=mu></span></header>
 <nav id=nav><button data-t=estado class=on>Estado</button><button data-t=sensores>Sensores</button><button data-t=red>Red</button><button data-t=conexion>Conexión</button><button data-t=cam id=bcam hidden>Cámara</button></nav>
 
 <section id=estado><div id=sens></div><div class=card id=info></div></section>
@@ -55,13 +55,13 @@ img{width:100%;border-radius:8px;background:var(--bd);min-height:140px;display:b
 <div class=row><span class=mu>Red actual</span><b id=rnow>—</b></div>
 <div class=btns><button onclick=redes()>Buscar redes</button></div>
 <label for=lista>Redes encontradas</label>
-<select id=lista onchange="if(this.value)$('#ssid').value=this.value"><option value="">Pulsa Buscar redes</option></select>
+<select id=lista onchange="if(this.value)$('#ssid').value=this.value"><option value="">Redes disponibles tras la búsqueda</option></select>
 <label for=ssid>Nombre de la red</label><input id=ssid autocomplete=off autocapitalize=off>
 <label for=wpass>Contraseña</label><input id=wpass type=password placeholder="Sin cambios">
 <button class=p onclick=gRed()>Guardar y reiniciar</button></div></section>
 
 <section id=conexion hidden>
-<div class=card><h2>API de BioRed</h2>
+<div class=card><h2>API HTTPS</h2>
 <label class=row>Enviar lecturas<input type=checkbox id=aon></label>
 <label for=aurl>URL</label><input id=aurl inputmode=url>
 <label for=akey>Key de dispositivo</label><input id=akey type=password placeholder="Sin cambios">
@@ -105,7 +105,7 @@ async function estado(){
  if(L)return;
  try{const d=await J('/api/estado');
   $('#pills').innerHTML=dot(d.wifi.ok)+'WiFi'+dot(d.api.on&&d.api.ultimo==201)+'API'+dot(d.mqtt.on&&d.mqtt.ok)+'MQTT';
-  $('#sens').innerHTML=d.sensores.filter(s=>s.on).map(s=>'<div class=card><h2>'+s.nombre+'<small>'+s.estado+'</small></h2><div class=vals>'+Object.entries(s.datos).map(([k,x])=>'<span>'+k+'<b>'+x+'</b></span>').join('')+'</div></div>').join('')||'<div class=card><p class=mu>No hay sensores activos. Actívalos en la pestaña Sensores.</p></div>';
+  $('#sens').innerHTML=d.sensores.filter(s=>s.on).map(s=>'<div class=card><h2>'+s.nombre+'<small>'+s.estado+'</small></h2><div class=vals>'+Object.entries(s.datos).map(([k,x])=>'<span>'+k+'<b>'+x+'</b></span>').join('')+'</div></div>').join('')||'<div class=card><p class=mu>No hay sensores activos. La activación se realiza en la pestaña Sensores.</p></div>';
   $('#info').innerHTML=[['Dirección',d.wifi.ip+(d.wifi.ap?' (modo configuración)':'')],['Señal',d.wifi.ok?d.wifi.rssi+' dBm':'sin red'],['Encendida',up(d.uptime)],['Memoria libre',Math.round(d.heap/1024)+' KB'],['API',d.api.on?(d.api.ultimo==201?d.api.enviados+' envíos':d.api.ultimo?'error '+d.api.ultimo:'esperando'):'apagada'],['MQTT',d.mqtt.on?(d.mqtt.ok?d.mqtt.publicados+' publicados':d.mqtt.error||'conectando'):'apagado'],['Versión',d.version]].map(([k,x])=>'<div class=row><span class=mu>'+k+'</span><span>'+x+'</span></div>').join('');
   $('#bcam').hidden=!(d.camara||d.motores);$('#pad').hidden=!d.motores;
  }catch(e){$('#pills').innerHTML=dot(0)+'Sin conexión'}
@@ -115,7 +115,7 @@ async function cargar(){
  $('#slist').innerHTML=C.sensores.map((s,i)=>'<div class=row><label class=row><input type=checkbox id=s'+i+(s.on?' checked':'')+'>'+s.nombre+'</label><span class=mu>GPIO <input class=pin type=number id=p'+i+' min=0 max=48 value='+s.pin+'></span></div>').join('');
  $('#rnow').textContent=C.wifi.ssid||'—';$('#ssid').value=C.wifi.ssid;
  const a=C.api,m=C.mqtt,s=(i,x)=>$('#'+i).value=x;
- $('#aon').checked=a.on;s('aurl',a.url);s('aint',a.intervalo);$('#akey').placeholder=a.keySet?'Guardada (sin cambios)':'Pega la key de la placa';
+ $('#aon').checked=a.on;s('aurl',a.url);s('aint',a.intervalo);$('#akey').placeholder=a.keySet?'Guardada (sin cambios)':'Clave de dispositivo para autenticación';
  $('#mon').checked=m.on;s('mhost',m.host);s('mport',m.port);s('muser',m.user);s('mraiz',m.raiz);s('mmod',m.modulo);s('mint',m.intervalo);
  $('#mpass').placeholder=m.passSet?'Guardada (sin cambios)':'';$('#ppass').placeholder=C.portalPassSet?'Guardada (sin cambios)':'Sin contraseña';
  $('#mtop').textContent='Publica en '+m.raiz+'/'+m.modulo+'/<sensor> y '+m.raiz+'/'+m.modulo+'/estado';
@@ -123,7 +123,7 @@ async function cargar(){
 const reinicia=()=>{toast('Reiniciando, vuelve a abrir el portal en unos segundos');setTimeout(()=>location.reload(),10000)};
 const fallo=()=>toast('No se pudo guardar');
 const gSens=()=>P('/api/config',{sensores:C.sensores.map((s,i)=>({id:s.id,on:$('#s'+i).checked,pin:+$('#p'+i).value}))}).then(reinicia).catch(fallo);
-const gRed=()=>v('ssid')?P('/api/config',{wifi:{ssid:v('ssid'),pass:$('#wpass').value}}).then(reinicia).catch(fallo):toast('Elige una red');
+const gRed=()=>v('ssid')?P('/api/config',{wifi:{ssid:v('ssid'),pass:$('#wpass').value}}).then(reinicia).catch(fallo):toast('Debe seleccionarse una red');
 const gCon=()=>P('/api/config',{api:{on:$('#aon').checked,url:v('aurl'),key:v('akey'),intervalo:+v('aint')},mqtt:{on:$('#mon').checked,host:v('mhost'),port:+v('mport'),user:v('muser'),pass:$('#mpass').value,raiz:v('mraiz'),modulo:v('mmod'),intervalo:+v('mint')},portalPass:$('#ppass').value}).then(()=>{toast('Cambios guardados');['akey','mpass','ppass'].forEach(i=>$('#'+i).value='');cargar();estado()}).catch(fallo);
 let R=0;
 async function redes(){
@@ -136,11 +136,11 @@ async function redes(){
    R=0;toast(d.redes.length+' redes encontradas');return}
   await new Promise(r=>setTimeout(r,2000));
  }
- R=0;toast('La búsqueda tardó demasiado, inténtalo otra vez');
+ R=0;toast('La búsqueda excedió el tiempo de espera');
 }
 function foto(){L=0;$('#img').src='/resources/cam/cam-lo.jpg?t='+Date.now()}
 function live(on){const i=$('#img');if(on){L=1;i.src='/resources/cam/live?t='+Date.now()}else{L=0;i.removeAttribute('src')}}
-async function mv(d){try{const r=await J('/api/mover?dir='+d+'&pasos='+$('#pasos').value);toast(r.ok?'Listo':r.error)}catch(e){toast('No se pudo mover')}}
+async function mv(d){try{const r=await J('/api/mover?dir='+d+'&pasos='+$('#pasos').value);toast(r.ok?'Movimiento completado':r.error)}catch(e){toast('No se pudo mover')}}
 document.addEventListener('keydown',e=>{if($('#cam').hidden||/INPUT|SELECT/.test(e.target.tagName))return;const m={ArrowUp:'ARRIBA',ArrowDown:'ABAJO',ArrowLeft:'IZQ',ArrowRight:'DER'}[e.key];if(m){e.preventDefault();mv(m)}});
 cargar().catch(()=>{});estado();setInterval(estado,5000);
 </script></body></html>)HTML";

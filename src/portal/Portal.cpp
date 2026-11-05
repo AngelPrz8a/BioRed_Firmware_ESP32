@@ -141,7 +141,7 @@ namespace {
       texto(m, "raiz", cfg.mqttRaiz, sizeof cfg.mqttRaiz);
       texto(m, "modulo", cfg.mqttModulo, sizeof cfg.mqttModulo);
       segmento(cfg.mqttRaiz); segmento(cfg.mqttModulo);
-      if (!cfg.mqttRaiz[0]) strcpy(cfg.mqttRaiz, "biored");
+      if (!cfg.mqttRaiz[0]) strcpy(cfg.mqttRaiz, "sensores");
       if (!cfg.mqttModulo[0]) strcpy(cfg.mqttModulo, "sensor-1");
       const uint32_t pt = m["port"] | (uint32_t)cfg.mqttPort;
       cfg.mqttPort = pt ? pt : 1883;

@@ -8,8 +8,8 @@ namespace {
   const int      MQ_CALIB_MUESTRAS = 30;
 }
 
-// MQ135 sin divisor de tensión: la salida puede acercarse a 5 V y el ADC del
-// ESP32-S3 admite 3,3 V. Se recomienda un divisor 10k/15k en despliegues fijos.
+// La salida del módulo MQ135 puede acercarse a 5 V: nunca debe superar el
+// máximo admitido por el pin ADC de la placa (habitualmente 3,3 V).
 class SensorMQ135 : public Sensor {
   enum Fase { CALENTANDO, CALIBRANDO, LISTO };
   MQUnifiedsensor* mq_ = nullptr;
@@ -58,7 +58,7 @@ class SensorMQ135 : public Sensor {
           const float r0 = r0Acum_ / MQ_CALIB_MUESTRAS;
           mq_->setR0(r0);
           Serial.printf("[MQ135] R0 = %.3f kOhm%s\n", r0,
-                        (r0 < 1.0f || r0 > 100.0f) ? "  AVISO fuera de 1-100: revisa alimentacion 5V y aire limpio" : "");
+                        (r0 < 1.0f || r0 > 100.0f) ? "  AVISO fuera de 1-100: verificar alimentacion 5V y aire limpio" : "");
           fase_ = LISTO;
         }
         break;

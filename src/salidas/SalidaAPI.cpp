@@ -39,7 +39,7 @@ namespace {
     if (!http.begin(cliente, cfg.apiUrl)) { respuesta = "URL invalida"; return -100; }
     http.setConnectTimeout(TIMEOUT_MS);
     http.setTimeout(TIMEOUT_MS);
-    http.setUserAgent(String("BioRed-ESP32/") + BIORED_VERSION);
+    http.setUserAgent(String("ESP32-WiFi-Modular/") + BIORED_VERSION);
     http.addHeader("Content-Type", "application/json");
     http.addHeader("x-api-key", cfg.apiKey);
     const int codigo = http.POST(cuerpo);
@@ -60,8 +60,8 @@ namespace {
       case 400: return "El JSON no cumple el contrato (ver error.details)";
       case 401: return "Key ausente o invalida (debe ser la de dispositivo)";
       case 403: return "Cloudflare bloqueo la peticion (regla WAF para /api/v1/readings/ingest)";
-      case 404: return "Ruta no encontrada: revisa la URL";
-      case 422: return "Estacion no registrada o sin sensor activo (revisa la MAC)";
+      case 404: return "Ruta no encontrada: verifique la URL configurada";
+      case 422: return "Estacion no registrada o sin sensor activo: verifique la MAC";
       case 429: return "Demasiadas peticiones";
       default:  return c >= 500 ? "Falla del servidor" : "Sin conexion (wifi, DNS, certificado o tiempo de espera)";
     }
