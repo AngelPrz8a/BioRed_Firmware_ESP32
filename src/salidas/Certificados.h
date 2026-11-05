@@ -1,7 +1,8 @@
 #pragma once
 // Raíces de confianza para validar el HTTPS de la API (no se usa setInsecure).
 //
-// PEGA AQUÍ, sin cambios, el bloque CERTIFICADOS_RAIZ de tu antiguo EnvioAPI.cpp
+// Ubicación para incorporar, sin modificaciones, el bloque CERTIFICADOS_RAIZ
+// del archivo EnvioAPI.cpp existente en la implementación de origen.
 // (las raíces de Google Trust Services, Let's Encrypt y SSL.com), así:
 //
 //   const char CERTIFICADOS_RAIZ[] = R"PEM(

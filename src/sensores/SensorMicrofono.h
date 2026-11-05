@@ -62,7 +62,7 @@ class SensorMicrofono : public Sensor {
       l_.fs = (uint32_t)(i_.muestras * 1000.0 / dur);
       l_.valida = l_.offset >= MIC_OFFSET_MIN && l_.offset <= MIC_OFFSET_MAX;
       l_.ts = millis();
-      if (!l_.valida) Serial.printf("[Audio] AVISO offset %.0f mV fuera de rango. Revisa el cableado en GPIO%d\n", l_.offset, pin_);
+      if (!l_.valida) Serial.printf("[Audio] AVISO offset %.0f mV fuera de rango. Verificar el cableado en GPIO%d\n", l_.offset, pin_);
     }
     nuevoIntervalo();
   }

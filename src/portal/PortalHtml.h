@@ -132,7 +132,7 @@ async function redes(){
   const d=await J('/api/redes').catch(()=>null);
   if(!d){R=0;toast('No se pudo buscar redes');return}
   if(!d.escaneando){
-   $('#lista').replaceChildren(new Option(d.redes.length?'Elige una red':'No se encontraron redes',''),...d.redes.map(r=>new Option(r.ssid+' ('+r.rssi+' dBm)',r.ssid)));
+   $('#lista').replaceChildren(new Option(d.redes.length?'Debe seleccionarse una red':'No se encontraron redes',''),...d.redes.map(r=>new Option(r.ssid+' ('+r.rssi+' dBm)',r.ssid)));
    R=0;toast(d.redes.length+' redes encontradas');return}
   await new Promise(r=>setTimeout(r,2000));
  }
