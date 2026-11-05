@@ -53,6 +53,7 @@ carpeta antes de abrirla en Arduino IDE.
 
 ## Primer arranque y conexión
 
+1. Duplicar el archivo en `src/BioRedConfig.example.h` y renombrarlo como `src/BioRedConfig.h`
 1. Sin credenciales WiFi guardadas, el ESP32 crea el punto de acceso
    **ESP32-Setup**. La contraseña inicial se define mediante `BIORED_AP_PASS`
    en `src/BioRedConfig.h` (inicialmente `esp32setup`). Se recomienda cambiarla
